@@ -38,6 +38,13 @@ object SunTimes {
         return Day(minutesOf(transit - hour / 360.0, zone), minutesOf(transit + hour / 360.0, zone))
     }
 
+    fun nightAt(latitude: Double, longitude: Double, millis: Long, zone: TimeZone = TimeZone.getDefault()): Boolean {
+        val calendar = Calendar.getInstance(zone).apply { timeInMillis = millis }
+        val minute = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+        val day = if (latitude != 0.0 || longitude != 0.0) of(latitude, longitude, millis, zone) else null
+        return night(minute, day)
+    }
+
     fun night(minuteOfDay: Int, day: Day?): Boolean {
         if (day == null) return minuteOfDay < FALLBACK_SUNRISE || minuteOfDay >= FALLBACK_SUNSET
         if (day.polar) return day.sunrise == day.sunset

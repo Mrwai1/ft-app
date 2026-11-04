@@ -427,6 +427,7 @@ class CarLifeService : Service() {
     @Volatile private var mediaReady = false
     @Volatile private var touchFt = false
     @Volatile private var touchBeside = false
+    private val aaTouches = app.ft.aa.AaTouches()
     @Volatile private var carPaused = false
     private var soundWatch: Job? = null
     private var progressJob: Job? = null
@@ -1420,13 +1421,13 @@ class CarLifeService : Service() {
         }
         val aa = AaHeadUnitService.current
         if (st.aaOverlay && aa != null && aa.phase.value >= AaSession.Phase.DISCOVERED) {
-            if (action < 0) return
             val p = app.prefs
             val viewport = AaTouchViewport.bounds ?: return
-            if (action == CarTouch.DOWN) touchBeside = !viewport.contains(x, y)
+            if (t.action == CarTouch.DOWN) touchBeside = !viewport.contains(x, y)
             if (touchBeside) return
             val point = viewport.map(x, y, p.aaWidth, p.aaHeight)
-            aa.sendTouch(point.first, point.second, action)
+            val point2 = if (t.x2 >= 0 && t.y2 >= 0) viewport.map(t.x2, t.y2, p.aaWidth, p.aaHeight) else -1 to -1
+            aaTouches.translate(t.action, point.first, point.second, point2.first, point2.second, t.index).forEach { aa.sendTouches(it) }
             return
         }
         if (st.mirroring) {

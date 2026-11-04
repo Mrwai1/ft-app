@@ -40,6 +40,7 @@ class AaSession(
             job?.cancel()
         },
         cleanup = { reason ->
+            nightJob?.cancel()
             runCatching { mic.stop() }
             if (micWanted) {
                 micWanted = false
@@ -68,6 +69,8 @@ class AaSession(
     private val mic = AaMicrophone { pcm -> sendMicrophone(pcm) }
     @Volatile private var micWanted = false
     @Volatile private var carMicAt = 0L
+    private var nightJob: Job? = null
+    @Volatile private var night: Boolean? = null
 
     fun start() {
         if (!lifecycle.start()) return
@@ -279,12 +282,34 @@ class AaSession(
                 sendEnc(AaProtocol.CH_SENSOR, AaProtocol.SENSOR_START_RESPONSE, AaMessages.sensorStartResponse())
                 when (type) {
                     AaProtocol.SENSOR_DRIVING_STATUS -> sendEnc(AaProtocol.CH_SENSOR, AaProtocol.SENSOR_EVENT_INDICATION, AaMessages.sensorDrivingStatus(0))
-                    AaProtocol.SENSOR_NIGHT_MODE -> sendEnc(AaProtocol.CH_SENSOR, AaProtocol.SENSOR_EVENT_INDICATION, AaMessages.sensorNightMode(false))
+                    AaProtocol.SENSOR_NIGHT_MODE -> followNight()
                     else -> Unit
                 }
                 DiagLog.i(tag, "sensor start type=$type")
             }
             else -> DiagLog.d(tag, "sensor msg 0x${Integer.toHexString(id)}")
+        }
+    }
+
+    private fun nightNow(): Boolean =
+        app.ft.core.SunTimes.nightAt(prefs.lastLatitude.toDouble(), prefs.lastLongitude.toDouble(), System.currentTimeMillis())
+
+    private fun sendNight(now: Boolean) {
+        if (night == now) return
+        night = now
+        DiagLog.i(tag, if (now) "Android Auto switched to its night look" else "Android Auto switched to its day look")
+        sendEnc(AaProtocol.CH_SENSOR, AaProtocol.SENSOR_EVENT_INDICATION, AaMessages.sensorNightMode(now))
+    }
+
+    private fun followNight() {
+        night = null
+        sendNight(nightNow())
+        if (nightJob?.isActive == true) return
+        nightJob = scope.launch(Dispatchers.IO) {
+            while (isActive && lifecycle.running) {
+                kotlinx.coroutines.delay(60_000)
+                if (lifecycle.running) sendNight(nightNow())
+            }
         }
     }
 
@@ -363,14 +388,9 @@ class AaSession(
         }
     }
 
-    fun sendTouch(x: Int, y: Int, action: Int) {
+    fun sendTouches(event: AaTouches.Event) {
         if (_phase.value < Phase.DISCOVERED || AaProtocol.CH_INPUT !in openChannels) return
-        val aaAction = when (action) {
-            0 -> AaProtocol.POINTER_DOWN
-            1 -> AaProtocol.POINTER_UP
-            else -> AaProtocol.POINTER_MOVED
-        }
-        sendEnc(AaProtocol.CH_INPUT, AaProtocol.INPUT_EVENT_INDICATION, AaMessages.inputTouch(System.nanoTime(), x, y, aaAction))
+        sendEnc(AaProtocol.CH_INPUT, AaProtocol.INPUT_EVENT_INDICATION, AaMessages.inputTouches(System.nanoTime(), event))
     }
 
     fun sendKey(keycode: Int) {

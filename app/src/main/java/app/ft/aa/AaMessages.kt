@@ -130,16 +130,12 @@ object AaMessages {
     fun byeByeResponse(): ByteArray = ByteArray(0)
     fun avInputOpenResponse(session: Int): ByteArray = ProtoWriter().int32(1, session).int32(2, 0).toByteArray()
 
-    fun inputTouch(timestampNs: Long, x: Int, y: Int, action: Int, pointerId: Int = 0): ByteArray =
-        ProtoWriter()
-            .uint64(1, timestampNs)
-            .message(
-                3, ProtoWriter()
-                    .message(1, ProtoWriter().uint32(1, x).uint32(2, y).uint32(3, pointerId))
-                    .uint32(2, 0)
-                    .enum(3, action)
-            )
-            .toByteArray()
+    fun inputTouches(timestampNs: Long, event: AaTouches.Event): ByteArray {
+        val touch = ProtoWriter()
+        event.pointers.forEach { touch.message(1, ProtoWriter().uint32(1, it.x).uint32(2, it.y).uint32(3, it.id)) }
+        touch.uint32(2, event.index).enum(3, event.action)
+        return ProtoWriter().uint64(1, timestampNs).message(3, touch).toByteArray()
+    }
 
     fun inputKey(timestampNs: Long, keycode: Int, down: Boolean): ByteArray =
         ProtoWriter()

@@ -76,4 +76,24 @@ class SunTimesTest {
     private fun assertEquals(expected: Int, actual: Int, tolerance: Int) {
         assertTrue("expected $expected ± $tolerance but was $actual", kotlin.math.abs(expected - actual) <= tolerance)
     }
+
+    private fun baghdad(year: Int, month: Int, day: Int, hour: Int): Long =
+        Calendar.getInstance(baghdadZone).apply {
+            clear()
+            set(year, month - 1, day, hour, 0, 0)
+        }.timeInMillis
+
+    @Test
+    fun nightAtFollowsTheSunInErbil() {
+        assertFalse(SunTimes.nightAt(erbil.first, erbil.second, baghdad(2026, 6, 21, 12), baghdadZone))
+        assertTrue(SunTimes.nightAt(erbil.first, erbil.second, baghdad(2026, 6, 21, 23), baghdadZone))
+        assertTrue(SunTimes.nightAt(erbil.first, erbil.second, baghdad(2026, 12, 21, 18), baghdadZone))
+        assertFalse(SunTimes.nightAt(erbil.first, erbil.second, baghdad(2026, 6, 21, 18), baghdadZone))
+    }
+
+    @Test
+    fun nightAtWithoutALocationUsesTheFallbackHours() {
+        assertFalse(SunTimes.nightAt(0.0, 0.0, baghdad(2026, 6, 21, 12), baghdadZone))
+        assertTrue(SunTimes.nightAt(0.0, 0.0, baghdad(2026, 6, 21, 20), baghdadZone))
+    }
 }
