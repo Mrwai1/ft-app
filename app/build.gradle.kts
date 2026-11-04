@@ -11,6 +11,11 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+fun signing(name: String, env: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(name)?.takeIf { it.isNotBlank() }
+
+val releaseStore = signing("storeFile", "FT_KEYSTORE_FILE")?.let { rootProject.file(it) }?.takeIf { it.exists() }
+
 android {
     namespace = "app.ft"
     compileSdk = 36
@@ -24,21 +29,20 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = rootProject.file(keystoreProps.getProperty("storeFile", "ft-release.jks"))
-            storePassword = keystoreProps.getProperty("storePassword")
-            keyAlias = keystoreProps.getProperty("keyAlias")
-            keyPassword = keystoreProps.getProperty("keyPassword")
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = releaseStore
+                storePassword = signing("storePassword", "FT_KEYSTORE_PASSWORD")
+                keyAlias = signing("keyAlias", "FT_KEY_ALIAS")
+                keyPassword = signing("keyPassword", "FT_KEY_PASSWORD")
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
-        }
-        debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

@@ -116,7 +116,11 @@ The **Android Auto disconnects? What to check** link on the Log tab explains thi
 
 ## Building
 
-Gradle wrapper, AGP 8.13, Kotlin 2.3, Compose Material 3 Expressive, Android 10 and newer. `./gradlew assembleRelease` builds `app/build/outputs/apk/release/app-release.apk`, signed with the keystore named in `keystore.properties`. The phone-apps helper lives in `server/` and is packed into the same APK.
+Gradle wrapper, AGP 8.13, Kotlin 2.3, Compose Material 3 Expressive, Android 10 and newer. `./gradlew assembleRelease` builds `app/build/outputs/apk/release/app-release.apk`. The phone-apps helper lives in `server/` and is packed into the same APK.
+
+The signing key is never kept in the repository. A release build is signed with the key named in a local `keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`), or in the environment variables `FT_KEYSTORE_FILE`, `FT_KEYSTORE_PASSWORD`, `FT_KEY_ALIAS` and `FT_KEY_PASSWORD`; without one the release APK is left unsigned. Debug builds use Android's standard debug key.
+
+GitHub Actions (`.github/workflows/build.yml`) runs the unit tests and builds the release APK on every push; the APK is under **ft-apk** on the run's page. To have it signed, add two repository secrets: `FT_KEYSTORE_BASE64` (the keystore, base64-encoded) and `FT_KEYSTORE_PASSWORD`. The key alias is `ft`.
 
 ## Credit and license
 
