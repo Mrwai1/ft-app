@@ -29,6 +29,7 @@ import app.ft.ShareActivity
 import app.ft.aa.AaKeep
 import app.ft.aa.AaInstaller
 import app.ft.aa.AaTouchViewport
+import app.ft.aa.AaTouches
 import app.ft.aa.AaHeadUnitService
 import app.ft.aa.AaSession
 import app.ft.core.CarAudioBus
@@ -427,7 +428,7 @@ class CarLifeService : Service() {
     @Volatile private var mediaReady = false
     @Volatile private var touchFt = false
     @Volatile private var touchBeside = false
-    private val aaTouches = app.ft.aa.AaTouches()
+    private val aaTouches = AaTouches()
     @Volatile private var carPaused = false
     private var soundWatch: Job? = null
     private var progressJob: Job? = null
